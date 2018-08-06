@@ -36,7 +36,25 @@ Pod::Spec.new do |s|
   # ――― Project Settings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
   
   # s.requires_arc = true
-
     #s.dependency "SwiftyJSON"
+s.prepare_command = <<-CMD
+SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+mig -arch "i386" -header "Source/mach_exc_i386.h" -server /dev/null -user "Source/mach_exc_i386User.inc" "${SDKROOT}/usr/include/mach/mach_exc.defs"
+mig -arch "x86_64" -header "Source/mach_exc_x86_64.h" -server /dev/null -user "Source/mach_exc_x86_64User.inc" "${SDKROOT}/usr/include/mach/mach_exc.defs"
+
+echo '#ifdef __LP64__'               > Source/mach_exc.h
+echo '#include "mach_exc_x86_64.h"' >> Source/mach_exc.h
+echo '#else'                        >> Source/mach_exc.h
+echo '#include "mach_exc_i386.h"'   >> Source/mach_exc.h
+echo '#endif'                       >> Source/mach_exc.h
+
+FILE_86=$(cat Source/mach_exc_i386User.inc)
+FILE_64=$(cat Source/mach_exc_x86_64User.inc)
+echo '#ifdef __LP64__'  > Source/mach_exc.c
+echo "$FILE_64"        >> Source/mach_exc.c
+echo '#else'           >> Source/mach_exc.c
+echo "$FILE_86"        >> Source/mach_exc.c
+echo '#endif'          >> Source/mach_exc.c
+CMD
 
 end
